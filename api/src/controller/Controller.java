@@ -1,23 +1,31 @@
 package controller;
 
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.sql.*;
-import java.util.*;
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 public class Controller {
-	public static List<Map<String, Object>> rsToMapList(ResultSet rs) {
+
+	public static List<Map<String,Object>> rsToMapList(ResultSet rs) {
 		List<Map<String, Object>> list = new ArrayList<>();
 		try {
 			ResultSetMetaData metadata = rs.getMetaData();
-			int columnCount = metadata.getColumnCount();
-			while (rs.next()) {
+			int columnCount = metadata.getColumnCount();	
+			while(rs.next()) {
 				Map<String, Object> map = new LinkedHashMap<>();
 				for (int i = 1; i <= columnCount; i++) {
 					String columnName = metadata.getColumnName(i);
 					map.put(columnName.toLowerCase(), rs.getObject(i));
 				}
-				list.add(map);
+				list.add(map);			
 			}
 			rs.close();
 		} catch (SQLException e) {
@@ -25,7 +33,6 @@ public class Controller {
 		}
 		return list;
 	}
-	
 	public static boolean tableExist(String tableName) {
 		try {
 			Connection conn = DbConnector.getConnection();
@@ -38,7 +45,7 @@ public class Controller {
 		}
 	}
 
-	public static List<Map<String, Object>> executeQuery(String query){
+	public static List<Map<String, Object>> executeQuery(String query){	
 		System.out.println(query);
 		List<Map<String, Object>> list = null;		
 		try {
@@ -63,7 +70,6 @@ public class Controller {
 			return 0;
 		}
 	}
-	
 	public static int createTable(String tableName) {
 		try {
 			String queryClass = "query.Query" + tableName;
@@ -80,13 +86,11 @@ public class Controller {
 
 	public static void add(String tableName, 	Map<String, Object> map) {
 		try {
-			System.out.println(tableName);
 			String queryClass = "query.Query" + tableName;
 			Class<?> clz = Class.forName(queryClass);
-			//Отримуємо текст sql апиту на додавання
-			Method mtd = clz.getDeclaredMethod("queryAdd",Map.class);
+			//Отримуємо текст sql запиту на додавання
+			Method mtd = clz.getMethod("queryAdd",Map.class);
 			String sql = (String) mtd.invoke(null,map);
-			System.out.println(sql);
 			//Передаємо запит контролеру
 			Controller.executeUpdate(sql);
 		} catch (Exception e) {
@@ -121,34 +125,5 @@ public class Controller {
 			e.printStackTrace();
 		} 
 	}
-	
-	public static void checkExistTable(String tableName) throws ClassNotFoundException, NoSuchMethodException, SecurityException, IllegalAccessException, IllegalArgumentException, InvocationTargetException
-	{
-		try {
-			DatabaseMetaData md = DbConnector.getConnection().getMetaData();
-			ResultSet rs = md.getTables(null, null, tableName.toUpperCase(), null);
-			if (rs.next()) {
-			  //Table Exist
-				System.out.println("Table "+tableName+" exist!");
-			}else
-			{
-				try {
-					Connection conn = DbConnector.getConnection();
-					Statement st = conn.createStatement();
-					String queryClass  = "query.Query" + tableName;
-					Class<?> clz = Class.forName(queryClass);
-					Method mtd = clz.getMethod("queryCreate");
-					String query = (String) mtd.invoke(null);
-					st.executeQuery(query);
-					System.out.println("Table successfully create");
-				} catch (SQLException e2) {
-					e2.printStackTrace();
-				}
-			}
-		}catch (SQLException e1) {
-			// TODO: handle exception
-			e1.printStackTrace();
-		}
-	}
-
 }
+
